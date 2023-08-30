@@ -8,7 +8,6 @@ path_json = 'res/ex.json'
 # read image   
 img = cv2.imread(path_img)
 
-
 # read json 
 with open(path_json) as f:
     data = json.load(f)
