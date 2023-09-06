@@ -8,7 +8,7 @@ Config.path2pretrained  = "pretrained/CvT-13-224x224-IN-1k.pth"
 
 Config.data_root        = './dataset'
 
-
+Config.apex             = True
 Config.device     		= 'cuda:0' #'mps' #'cuda:0'
 Config.imgsize   		= 512
 Config.debug 	  		= False
@@ -21,13 +21,13 @@ Config.scheduler  		= 'CosineAnnealingWarmRestarts'
 
 Config.dtype        	= 'point-base'
 Config.is_grayscale 	= False
-Config.loss 			= 'cross_entropy'
+Config.loss 			= 'cEloss'
 
 
-Config.weight_lm 		= True
+Config.use_weight       = False
 
-Config.train_bs        = 4
-Config.valid_bs        = 8
+Config.train_bs        = 8
+Config.valid_bs        = 16
 
 # wing loss params
 Config.wingloss_w 		= 10
@@ -40,5 +40,7 @@ Config.do_fmix_v2       = False
 Config.do_cutmix        = False
 Config.do_tile_mix      = False
 Config.aug_mix          = False
+
+Config.BCELoss 	    	= False
 
 Config.finalize()

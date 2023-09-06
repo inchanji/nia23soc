@@ -1,2 +1,8 @@
 CvT/pretrained/*
+CvT/weights/*
 CvT/dataset/*
+CvT/wandb/
+nohup.out
+__pycache__
+*.pyc
+

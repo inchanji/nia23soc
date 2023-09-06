@@ -45,7 +45,7 @@ class ClassificationDataset(Dataset):
 					 'shape'		: (512, 512),
 					 'max_soft'		: True,
 					 'reformulate'	: False },
-				 one_hot_label 	= False,
+				 one_hot_label 	= True,
 				 inference 		= False,
 				 cutmix_params 	= { 'alpha': 1, },
 				 is_train = True

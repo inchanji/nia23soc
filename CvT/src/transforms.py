@@ -21,7 +21,7 @@ STDPIXVAL_G  = np.array([0.25])
 
 
 
-def get_valid_transforms(imgsize = 256, is_grayscale = False, is_tta=False):
+def get_valid_transforms(imgsize = 512, is_grayscale = False, is_tta=False):
 		return Compose([
 				RandomBrightnessContrast(brightness_limit=(-0.3,0.75), contrast_limit=(-0.5, 0.5), p=0.5) if is_tta else None,
 				HorizontalFlip(p=0.5) if is_tta else None,
@@ -31,10 +31,10 @@ def get_valid_transforms(imgsize = 256, is_grayscale = False, is_tta=False):
 						  std = STDPIXVAL_G if is_grayscale else STDPIXVAL_G, max_pixel_value = 255.0, p=1.0),				
 				ToTensorV2()
 			],  p = 1.,
-				keypoint_params = KeypointParams(format='xy', remove_invisible=False)
+				# keypoint_params = KeypointParams(format='xy', remove_invisible=False)
 			)
 
-def get_train_transforms(imgsize = 256, is_grayscale = False):
+def get_train_transforms(imgsize = 512, is_grayscale = False):
 	minsize = int(imgsize * 1.05)
 	if is_grayscale:
 		return Compose([
