@@ -2,7 +2,8 @@ import importlib
 from train import train
 
 config_paths = [ 
-				  "configs.cvt-13",
+				#   "configs.cvt-13",
+				"configs.cvt-21",
 ]
 
 

@@ -1,0 +1,46 @@
+from configs.base import base
+
+Config 		= base.CFG()
+
+Config.model_arch 		= "cvt-21-384x384"
+Config.model_yaml 		= "configs/cvt-21-384x384.yaml"
+Config.path2pretrained  = "pretrained/CvT-21-384x384-IN-22k.pth"
+
+Config.data_root        = './dataset'
+
+Config.apex             = True
+Config.device     		= 'cuda:0' #'mps' #'cuda:0'
+Config.imgsize   		= 512
+Config.debug 	  		= False
+Config.epochs 	  		= 150
+Config.patience   		= 10
+
+# Config.dataset    	= "RESIZED"
+
+Config.scheduler  		= 'CosineAnnealingWarmRestarts'
+
+Config.dtype        	= 'point-base'
+Config.is_grayscale 	= False
+Config.loss 			= 'cEloss'
+
+
+Config.use_weight       = False
+
+Config.train_bs        = 8
+Config.valid_bs        = 16
+
+# wing loss params
+Config.wingloss_w 		= 10
+Config.wingloss_e 		= 0.5
+Config.valid_tta 		= True
+Config.OOF              = False
+
+Config.do_fmix          = False
+Config.do_fmix_v2       = False
+Config.do_cutmix        = False
+Config.do_tile_mix      = False
+Config.aug_mix          = False
+
+Config.BCELoss 	    	= False
+
+Config.finalize()

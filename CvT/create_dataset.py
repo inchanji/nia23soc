@@ -71,16 +71,16 @@ if __name__ == "__main__":
     df_valid, df_test = train_test_split(df_test, test_size=0.5, random_state=42, stratify=df_test['label'])
 
 
-    df_train.to_csv(f"{root_path}/CvT/train.csv", index=False)
-    df_valid.to_csv(f"{root_path}/CvT/valid.csv", index=False)
-    df_test.to_csv(f"{root_path}/CvT/test.csv", index=False)
+    # df_train.to_csv(f"{root_path}/CvT/train.csv", index=False)
+    # df_valid.to_csv(f"{root_path}/CvT/valid.csv", index=False)
+    # df_test.to_csv(f"{root_path}/CvT/test.csv", index=False)
 
     # show the number of images per class in train and test set
-    print("train set")
+    print("train set: ", len(df_train))
     print(df_train['label'].value_counts())
-    print("valid set")
+    print("valid set:", len(df_valid))
     print(df_valid['label'].value_counts())
-    print("test set")
+    print("test set:", len(df_test))
     print(df_test['label'].value_counts())
 
     
