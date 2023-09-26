@@ -1,3 +1,7 @@
+crack_segmentation/test_imgs/*
+crack_segmentation/test_result/*
+crack_segmentation/pretrained/*
+
 CvT/pretrained/*
 CvT/weights/*
 CvT/dataset/*
