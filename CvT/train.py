@@ -15,25 +15,18 @@ def train(config):
 	path_valid 	= f"{config.data_root}/CvT/valid.csv"    
 	path_test 	= f"{config.data_root}/CvT/test.csv"
 
-	train		= pd.read_csv(path_train)
-	valid		= pd.read_csv(path_valid)
-	test		= pd.read_csv(path_test)    
-
-	# the number of classes
-	config.num_classes = len(train['label'].unique())
+	train		= pd.read_csv(path_train)[:128]
+	valid		= pd.read_csv(path_valid)[:64]
+	test		= pd.read_csv(path_test)[:64]
 
 	train_loader = prepare_dataloader(train, config, is_training = True)
 	valid_loader = prepare_dataloader(valid, config, is_training = False)
 	test_loader  = prepare_dataloader(test, config, is_training = False)
 
 
-	model = build_model(config.model_yaml)
-	# load pretrained weights
-	if config.path2pretrained:
-		model.load_state_dict(torch.load(config.path2pretrained))
-	# update the number of classes
-	model.head = torch.nn.Linear(model.head.in_features, config.num_classes)
-	# print(model)
+	model = build_model(config.model_yaml, config.path2pretrained, num_classes = config.num_classes, multiclass = config.multiclass)
+	
+	
 
 	seed_everything(config.seed)
 	set_proc_name(config, "nia23soc-train-" + config.model_arch)
@@ -96,7 +89,8 @@ def train(config):
 		print(str(trans).split('(')[0])
 	print('*************************')	
 
-
+	
+	
 	if wandb and wandb.run is None :
 		wandb_run = wandb.init(project 	= config.projectName, 
 							   name 	= "{}-{}".format(config.model_arch, model_spec),
@@ -104,7 +98,7 @@ def train(config):
 							   job_type = "train")
 
 		wandb_table = wandb.Table(columns=["category", "id", "target", "prob", "image", "grad_cam_image"])	
-
+	
 
 	patience 		= 0
 	better_model 	= False
