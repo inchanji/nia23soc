@@ -10,3 +10,4 @@ nohup.out
 __pycache__
 *.pyc
 
+dataset/

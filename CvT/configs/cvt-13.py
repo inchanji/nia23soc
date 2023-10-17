@@ -6,7 +6,7 @@ Config.model_arch 		= "cvt-13-224x224"
 Config.model_yaml 		= "configs/cvt-13-224x224.yaml"
 Config.path2pretrained  = "pretrained/CvT-13-224x224-IN-1k.pth"
 
-Config.data_root        = './dataset'
+Config.data_root        = '../dataset/'
 
 Config.apex             = True
 Config.device     		= 'cuda:0' #'mps' #'cuda:0'

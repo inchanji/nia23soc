@@ -44,6 +44,11 @@ def get_modelname_ext(config):
 	if config.valid_tta: 
 		ext += "-tta" 		
 
+	if config.multiclass: 
+		ext += "-mc"
+	else:
+		ext += "-sc"
+
 	return ext
 
 

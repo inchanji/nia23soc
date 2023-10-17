@@ -85,6 +85,32 @@ class SuperLoss(nn.Module):
 		else:
 			return F.cross_entropy(logits, targets, reduction='none')
 
+# cross entropy for multi-label classification
+class MultiLabelCrossEntropyLoss(_WeightedLoss):
+	def __init__(self, weight = None, reduction = 'mean', num_classes = 10):
+		super().__init__(weight = weight, reduction = reduction)
+		self.weight 	= weight
+		self.reduction = reduction
+		self.threshold = 0.5
+		self.num_classes = num_classes
+
+	def forward(self, inputs, targets):
+		# lsm = F.log_softmax(inputs, -1)
+		lsm = F.logsigmoid(inputs)
+
+
+		if self.weight is not None:
+			lsm = lsm * self.weight.unsqueeze(0)
+
+		# print("lsm:",lsm.shape)
+		# print("targets:",targets.shape)
+
+		loss = -(targets * lsm).sum(-1)
+		if  self.reduction == 'sum':
+			loss = loss.sum()
+		elif  self.reduction == 'mean':
+			loss = loss.mean()
+		return loss          
 
 # reference: https://www.kaggle.com/c/siim-isic-melanoma-classification/discussion/173733
 class MyCrossEntropyLoss(_WeightedLoss):
@@ -132,17 +158,33 @@ class MyCrossEntropyLossOof(_WeightedLoss):
 
 
 def get_loss_fn(config, device, valid = False, weight = None):
-	if valid:
-		return nn.CrossEntropyLoss().to(device)
+	if config.multiclass:
+		if valid:
+			# multi-label classification
+			return torch.nn.MultiLabelSoftMarginLoss(weight = weight).to(device)
+			# return MultiLabelCrossEntropyLoss(weight = weight).to(device)
 
-	if config.loss == 'floss': 
-		return FocalLoss(alpha=1, gamma=2).to(device)
-	elif config.loss == 'sloss':
-		return SuperLoss(config, C=config.num_classes, lam = config.lam, valid = valid).to(device)	
-	elif config.loss == 'bceloss':
-		return nn.BCEWithLogitsLoss().to(device)
-	elif config.loss == 'cEloss':
-		return MyCrossEntropyLoss(weight = weight).to(device)
+		if config.loss == 'floss': 
+			return FocalLoss(alpha=1, gamma=2).to(device)
+		elif config.loss == 'sloss':
+			return SuperLoss(config, C=config.num_classes, lam = config.lam, valid = valid).to(device)	
+		elif config.loss == 'bceloss':
+			return nn.BCEWithLogitsLoss().to(device)
+		elif config.loss == 'cEloss':
+			return torch.nn.MultiLabelSoftMarginLoss(weight = weight).to(device)
+			# return MultiLabelCrossEntropyLoss(weight = weight).to(device)	
+			#return MyCrossEntropyLoss(weight = weight).to(device)
+	else:
+		if valid:
+			return MyCrossEntropyLoss(weight = weight).to(device)		
+		if config.loss == 'floss': 
+			return FocalLoss(alpha=1, gamma=2).to(device)
+		elif config.loss == 'sloss':
+			return SuperLoss(config, C=config.num_classes, lam = config.lam, valid = valid).to(device)	
+		elif config.loss == 'bceloss':
+			return nn.BCEWithLogitsLoss().to(device)
+		elif config.loss == 'cEloss':
+			return MyCrossEntropyLoss(weight = weight).to(device)		
 
 
 
@@ -232,29 +274,69 @@ def weightedMultiClassLogarithmicLoss(conf, target, M, weights = None):
 
 
 # f1 score 
-def f1_score(y_true, y_pred, threshold=0.5):
-	return fbeta_score(y_true, y_pred, 1, threshold)
+def f1_score(y_true, y_pred, threshold=0.5, multiclass = False):
+	return fbeta_score(y_true, y_pred, 1, threshold, multiclass)
 
-def fbeta_score(y_true, y_pred, beta, threshold, eps=1e-9):
+def fbeta_score(y_true, y_pred, beta, threshold, multiclass, eps=1e-9):
 	beta2 = beta ** 2
+	device = y_true.device
+	if multiclass:
+		threshold = torch.tensor([threshold]*y_true.shape[1]).to(device)
+	
+	if not multiclass:
+		# get one-hot-encoding prediction
 
-	y_pred = torch.ge(y_pred.float(), threshold).float()
+		idx = torch.argmax(y_pred, 1).cpu()
+		y_pred = torch.eye(y_true.shape[1])[idx].to(device)
+
+	else:
+		y_pred = torch.ge(y_pred.float(), threshold).float()
+
 	y_true = y_true.float()
 
-	true_positive = (y_pred * y_true).sum(dim=1)
-	precision = true_positive.div(y_pred.sum(dim=1).add(eps))
-	recall = true_positive.div(y_true.sum(dim=1).add(eps))
+	# if not multiclass:
+	# 	# convert one-hot-encoding to label
+	# 	y_pred = torch.argmax(y_pred, 1).float()
+	# 	y_true = torch.argmax(y_true, 1).float()
+
+	if y_pred.ndim == 1:
+		y_pred = y_pred.unsqueeze(0)
+	if y_true.ndim == 1:
+		y_true = y_true.unsqueeze(0)
+
+
+	true_positive 	= (y_pred * y_true).sum(dim=1)
+
+	if true_positive.ndim == 1:
+		true_positive = true_positive.unsqueeze(0)
+
+	precision 		= true_positive.div(y_pred.sum(dim=1).add(eps))
+
+	if precision.ndim == 1:
+		precision = precision.unsqueeze(0)
+
+	recall 			= true_positive.div(y_true.sum(dim=1).add(eps))
+
+	if recall.ndim == 1:
+		recall = recall.unsqueeze(0)
 
 	return torch.mean( precision.mul(recall).div(precision.mul(beta2) + recall + eps).mul(1 + beta2))
 
 # numpy version of f1 score
-def f1_score_numpy(y_true, y_pred, threshold=0.5):
-	return fbeta_score_numpy(y_true, y_pred, 1, threshold)
+def f1_score_numpy(y_true, y_pred, threshold=0.5, multiclass = False):
+	return fbeta_score_numpy(y_true, y_pred, 1, threshold, multiclass = multiclass)
 
-def fbeta_score_numpy(y_true, y_pred, beta, threshold, eps=1e-9):
+def fbeta_score_numpy(y_true, y_pred, beta, threshold, multiclass = False, eps=1e-9):
 	beta2 = beta ** 2
 
-	y_pred = np.greater_equal(y_pred.astype(np.float32), threshold).astype(np.float32)
+	if multiclass:
+		y_pred = np.greater_equal(y_pred.astype(np.float32), threshold).astype(np.float32)
+	else:
+		n_cls = y_true.shape[1]
+		# convert pred to one-hot-vector
+		y_pred = np.argmax(y_pred, 1)
+		y_pred = np.eye(n_cls)[y_pred].astype(np.float32)
+
 	y_true = y_true.astype(np.float32)
 
 	true_positive = np.sum(y_pred * y_true, axis=1)

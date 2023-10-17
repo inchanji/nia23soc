@@ -10,6 +10,14 @@ from src.transforms import MEANPIXVAL, STDPIXVAL
 from .FMix import sample_mask, make_low_freq_image, binarise_mask
 from .augmix_utils import augment_and_mix
 
+def str2onehot(strings, num_classes = 10):
+    ind = []
+    for str_ in strings:
+        onehot = [ int(i) for i in str_.split(" ") ]
+        ind.append(onehot)
+    return np.concatenate(ind, axis = 0).reshape(-1, num_classes)
+
+
 def load_data(path):
 	img = cv2.imread(path) 
 	img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
@@ -70,15 +78,11 @@ class ClassificationDataset(Dataset):
 		if self.config.do_fmix or self.config.do_cutmix:
 			self.one_hot_label = True
 
-		if self.inference:
-			self.one_hot_label = False
-
 		if self.output_label == True:
 			self.labels = self.df['label'].values
-
-			if self.one_hot_label is True and not self.inference:
-				self.labels = np.eye(self.config.num_classes)[self.labels]
-
+			self.labels = str2onehot(self.labels, num_classes = self.config.num_classes)
+	
+		
 		if self.config.do_fmix_v2 or self.config.do_tile_mix:
 			label_values = self.df['label'].values
 			self.iter_labels = []

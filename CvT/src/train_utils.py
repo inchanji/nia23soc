@@ -80,14 +80,25 @@ def train_one_epoch(epoch,
 		if ((step + 1) % config.verbose_step == 0) or ((step + 1) == len(train_loader)):
 			description = f'epoch {epoch} loss: {running_loss:.4f}'
 			pbar.set_description(description)	
-			
-		metric      = f1_score(image_labels, image_preds)
+		
+		# apply softmax to output
+
+		image_preds = torch.sigmoid(image_preds)
+		
+		metric      = f1_score(image_labels, image_preds, multiclass = config.multiclass)
 		metric_sum += metric*image_labels.shape[0]
 
 		if wandb is not None:	
 			wandb.log({ f"train_loss": loss_sum/sample_num,
 						f"f1_score": metric,
 					    f"lr": scheduler.get_last_lr()[0]})
+
+	if scheduler is not None and not schd_batch_update:
+		if config.scheduler == 'ReduceLROnPlateau':
+			scheduler.step(loss_sum/sample_num)
+		else:
+			scheduler.step()
+
 
 	return loss_sum/sample_num, metric_sum/sample_num
 
@@ -99,6 +110,7 @@ def valid_one_epoch(epoch,
 					loss_fn, 
 					val_loader, 
 					device, 
+					threshold = 0.5, 
 					scheduler=None, 
 					schd_loss_update=False, 
 					wandb = None
@@ -113,11 +125,14 @@ def valid_one_epoch(epoch,
 	image_conf_all 		= []
 	image_pred_conf_all = []
 
+	if config.multiclass:
+		threshold = torch.tensor([threshold]*config.num_classes).to(device)
+
 	pbar = tqdm(enumerate(val_loader), total=len(val_loader))
 	for step, (image, image_labels) in pbar:
 		with torch.no_grad():
 			image_preds   = model(image.float().to(device))
-
+			
 		# loss 		= loss_fn(image_preds, image_labels.to(device))
 		loss 		= loss_fn(image_preds.view(-1) if config.num_classes == 1 else image_preds, image_labels.to(device))
 
@@ -128,8 +143,14 @@ def valid_one_epoch(epoch,
 			description = f'epoch {epoch} loss: {loss_sum/sample_num:.4f}'
 			pbar.set_description(description)		
 
-			image_preds_all 	+= [torch.argmax(image_preds, 1).detach().cpu().numpy()]
-			image_pred_conf_all	+= [torch.softmax(image_preds, 1).detach().cpu().numpy()]
+			if config.multiclass:
+				# make pred as one-hot-encoding
+				image_preds_all 	+= [torch.ge(torch.sigmoid(image_preds), threshold).float().detach().cpu().numpy()]
+				image_pred_conf_all += [torch.sigmoid(image_preds).detach().cpu().numpy()]
+			else:
+				image_preds_all 	+= [torch.argmax(image_preds, 1).detach().cpu().numpy()]
+				image_pred_conf_all	+= [torch.softmax(image_preds, 1).detach().cpu().numpy()]
+			
 			image_conf_all 		+= [image_preds.detach().cpu().numpy()]
 
 		image_onehot_targets_all += [image_labels.long().detach().cpu().numpy()]
@@ -144,7 +165,9 @@ def valid_one_epoch(epoch,
 		image_pred_conf_all = np.concatenate(image_pred_conf_all)
 
 	val_accuracy 		= np.mean(image_preds_all.ravel()==image_targets_all)
-	val_f1_score 		= f1_score_numpy(image_onehot_targets_all, image_pred_conf_all)
+
+	val_f1_score 		= f1_score_numpy(image_onehot_targets_all, image_pred_conf_all, multiclass = config.multiclass)
+
 	
 	if scheduler is not None:
 		if schd_loss_update:
