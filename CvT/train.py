@@ -15,9 +15,9 @@ def train(config):
 	path_valid 	= f"{config.data_root}/CvT/valid.csv"    
 	path_test 	= f"{config.data_root}/CvT/test.csv"
 
-	train		= pd.read_csv(path_train)[:128]
-	valid		= pd.read_csv(path_valid)[:64]
-	test		= pd.read_csv(path_test)[:64]
+	train		= pd.read_csv(path_train)
+	valid		= pd.read_csv(path_valid)
+	test		= pd.read_csv(path_test)
 
 	train_loader = prepare_dataloader(train, config, is_training = True)
 	valid_loader = prepare_dataloader(valid, config, is_training = False)
