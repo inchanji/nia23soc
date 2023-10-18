@@ -25,9 +25,9 @@ if __name__ == "__main__":
 
     print("Loading dataset...")
 
-    train = pd.read_csv(f"{root_path}/train.csv")[:64]
-    valid = pd.read_csv(f"{root_path}/valid.csv")[:64]
-    test  = pd.read_csv(f"{root_path}/test.csv")[:64]
+    train = pd.read_csv(f"{root_path}/train.csv")
+    valid = pd.read_csv(f"{root_path}/valid.csv")
+    test  = pd.read_csv(f"{root_path}/test.csv")
 
     print("Dataset loaded.")
     print(train.head())
