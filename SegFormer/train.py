@@ -18,16 +18,16 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    device = 'cuda' if cuda.is_available() else 'cpu'
+    device = 'cuda:0' if cuda.is_available() else 'cpu'
     cuda.empty_cache()
     args        = parse_args()
     root_path   = args.root_path
 
     print("Loading dataset...")
 
-    train = pd.read_csv(f"{root_path}/train.csv")
-    valid = pd.read_csv(f"{root_path}/valid.csv")
-    test  = pd.read_csv(f"{root_path}/test.csv")
+    train = pd.read_csv(f"{root_path}/train.csv")[:64]
+    valid = pd.read_csv(f"{root_path}/valid.csv")[:64]
+    test  = pd.read_csv(f"{root_path}/test.csv")[:64]
 
     print("Dataset loaded.")
     print(train.head())
@@ -60,20 +60,18 @@ if __name__ == "__main__":
 
     print(model)
 
-
-
     train_dataset.set_transform(train_transforms)
     valid_dataset.set_transform(val_transforms)
     test_dataset.set_transform(val_transforms)
     
 
     trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_dataset,
-        eval_dataset=valid_dataset,
-        compute_metrics=compute_metrics,
-    )    
+                model = model,
+                args = training_args,
+                train_dataset = train_dataset,
+                eval_dataset = {'val': valid_dataset, 'test': test_dataset},
+                compute_metrics = compute_metrics,
+            )    
 
 
     trainer.train()

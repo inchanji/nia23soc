@@ -47,20 +47,103 @@ training_args = TrainingArguments(
 	load_best_model_at_end=True,
 	push_to_hub=False,
 	resume_from_checkpoint=True,
+	metric_for_best_model="eval_val_loss",
 	#hub_model_id=hub_model_id,
 	#hub_strategy="end",
 )
 
-items = ['mean_iou', 'per_category_iou', 'per_category_accuracy']
 
-metric = evaluate.load("mean_iou")
+
+# def compute_metrics(_dataset):
+# 	metric = evaluate.load("mean_iou")
+# 	metrics = {}
+
+# 	eval_sets = ['val', 'test']
+
+# 	with torch.no_grad():
+		
+# 		for eval_set in eval_sets:
+# 			# valid set 
+# 			logits, labels = _dataset[eval_set]
+
+# 			logits_tensor 	= torch.from_numpy(logits)
+# 			total_size 		= len(logits_tensor)
+
+# 			# calculate metrics by batch
+# 			num_batches 	= total_size // batch_size
+
+# 			mean_iou 		 = None
+# 			per_category_iou = None
+
+# 			valid_batches_per_cls = np.zeros(len(id2label))
+# 			valid_batches_tot 	  = 0
+
+# 			for i in range(num_batches):
+# 				start = i * batch_size
+# 				end = (i+1) * batch_size
+# 				if end > total_size:
+# 					end = total_size
+
+# 				logits_batch = logits_tensor[start:end]
+# 				labels_batch = labels[start:end]
+# 				iter_size 	 = end-start
+				
+# 				logits_batch = nn.functional.interpolate(
+# 						logits_batch,
+# 						size=labels_batch.shape[-2:],
+# 						mode="bilinear",
+# 						align_corners=False,
+# 					).argmax(dim=1)
+# 				pred_labels_batch = logits_batch.detach().cpu().numpy()
+
+# 				# see this issue for more info: https://github.com/huggingface/evaluate/pull/328#issuecomment-1286866576
+# 				metrics_batch = metric._compute(
+# 							predictions=pred_labels_batch,
+# 							references=labels_batch,
+# 							num_labels=len(id2label),
+# 							ignore_index=0,
+# 							reduce_labels=feature_extractor.do_reduce_labels,
+# 							)
+				
+# 				if np.isfinite(metrics_batch["mean_iou"]):
+# 					valid_batches_tot += iter_size
+
+# 				metrics_batch["mean_iou"] = np.nan_to_num(metrics_batch["mean_iou"])
+
+# 				if mean_iou is None:
+# 					mean_iou = metrics_batch["mean_iou"] * iter_size
+# 				else:
+# 					mean_iou += metrics_batch["mean_iou"] * iter_size
+
+# 				# replace nan with 0 in metrics_batch["per_category_iou"]
+# 				valid_batches_per_cls += np.isfinite(metrics_batch["per_category_iou"]).astype(np.int32) * iter_size
+
+# 				metrics_batch["per_category_iou"] = np.nan_to_num(metrics_batch["per_category_iou"])
+				
+# 				if per_category_iou is None:
+# 					per_category_iou = metrics_batch["per_category_iou"] * iter_size
+# 				else:
+# 					per_category_iou += metrics_batch["per_category_iou"] * iter_size
+
+# 			per_category_iou = per_category_iou / valid_batches_per_cls
+# 			mean_iou = mean_iou / valid_batches_tot
+
+			
+# 			metrics[f"mean_iou({eval_set})"] = mean_iou
+# 			for i, v in enumerate(per_category_iou):
+# 				metrics[f"iou_{id2label[i+1]}({eval_set})"] = v
+	
+# 	return metrics
+
+
 
 def compute_metrics(eval_pred):
+	metric = evaluate.load("mean_iou")
 	with torch.no_grad():
 		logits, labels = eval_pred
-		print(">>> LABELS", np.unique(labels))
+		# print(">>> LABELS", np.unique(labels))
 		logits_tensor = torch.from_numpy(logits)
-		print(">>> LOGITS shape:", logits_tensor.shape)
+		# print(">>> LOGITS shape:", logits_tensor.shape)
 
 		total_size = len(logits_tensor)
 		# calculate metrics by batch
@@ -69,11 +152,13 @@ def compute_metrics(eval_pred):
 		
 
 		mean_iou = None
-		mean_accuracy = None
-		overall_accuracy = None
+		# mean_accuracy = None
+		# overall_accuracy = None
 		per_category_iou = None
-		per_category_accuracy = None
+		# per_category_accuracy = None
 
+		valid_batches_per_cls = np.zeros(len(id2label))
+		valid_batches_tot = 0
 
 		for i in range(num_batches):
 			start = i * batch_size
@@ -82,6 +167,7 @@ def compute_metrics(eval_pred):
 				end = total_size
 			logits_batch = logits_tensor[start:end]
 			labels_batch = labels[start:end]
+			iter_size = end-start
 			
 			logits_batch = nn.functional.interpolate(
 					logits_batch,
@@ -90,6 +176,7 @@ def compute_metrics(eval_pred):
 					align_corners=False,
 				).argmax(dim=1)
 			pred_labels_batch = logits_batch.detach().cpu().numpy()
+
 			# currently using _compute instead of compute
 			# see this issue for more info: https://github.com/huggingface/evaluate/pull/328#issuecomment-1286866576
 			metrics_batch = metric._compute(
@@ -99,56 +186,34 @@ def compute_metrics(eval_pred):
 						ignore_index=0,
 						reduce_labels=feature_extractor.do_reduce_labels,
 						)
+			
+			if np.isfinite(metrics_batch["mean_iou"]):
+				valid_batches_tot += iter_size
 
-			# print("METRICS", metrics_batch)
+			metrics_batch["mean_iou"] = np.nan_to_num(metrics_batch["mean_iou"])
 
 			if mean_iou is None:
-				mean_iou = metrics_batch["mean_iou"] * (end-start)
+				mean_iou = metrics_batch["mean_iou"] * iter_size
 			else:
-				mean_iou += metrics_batch["mean_iou"] * (end-start)	
+				mean_iou += metrics_batch["mean_iou"] * iter_size
 
+			# replace nan with 0 in metrics_batch["per_category_iou"]
+			valid_batches_per_cls += np.isfinite(metrics_batch["per_category_iou"]).astype(np.int32) * iter_size
+
+			metrics_batch["per_category_iou"] = np.nan_to_num(metrics_batch["per_category_iou"])
+			
 			if per_category_iou is None:
-				per_category_iou = metrics_batch["per_category_iou"] * (end-start)
+				per_category_iou = metrics_batch["per_category_iou"] * iter_size
 			else:
-				per_category_iou += metrics_batch["per_category_iou"] * (end-start)
+				per_category_iou += metrics_batch["per_category_iou"] * iter_size
 
-		
-		# # scale the logits to the size of the label
-		# logits_tensor = nn.functional.interpolate(
-        #             logits_tensor,
-        #             size=labels.shape[-2:],
-        #             mode="bilinear",
-        #             align_corners=False,
-        #         ).argmax(dim=1)
+		per_category_iou = per_category_iou / valid_batches_per_cls
+		mean_iou = mean_iou / valid_batches_tot
 
-		# pred_labels = logits_tensor.detach().cpu().numpy()
-		# print("PRED LABELS", np.unique(pred_labels))
-		
-		# # currently using _compute instead of compute
-		# # see this issue for more info: https://github.com/huggingface/evaluate/pull/328#issuecomment-1286866576
-		# metrics = metric._compute(
-		# 			predictions=pred_labels,
-		# 			references=labels,
-		# 			num_labels=len(id2label),
-		# 			ignore_index=0,
-		# 			reduce_labels=feature_extractor.do_reduce_labels,
-				# )
-		
-		# print("METRICS", metrics)
-		
-		per_category_iou = per_category_iou / total_size
-		mean_iou = mean_iou / total_size
-
-
-		# add per category metrics as individual key-value pairs
-		# per_category_accuracy = metrics.pop("per_category_accuracy").tolist()
-		# per_category_iou = metrics.pop("per_category_iou").tolist()
 
 		metrics = {}
 		metrics["mean_iou"] = mean_iou
 		for i, v in enumerate(per_category_iou):
 			metrics[f"iou_{id2label[i+1]}"] = v
-		# metrics.update({f"accuracy_{id2label[i+1]}": v for i, v in enumerate(per_category_accuracy)})
-		# metrics.update({f"iou_{id2label[i+1]}": v for i, v in enumerate(per_category_iou)})
 	
 	return metrics

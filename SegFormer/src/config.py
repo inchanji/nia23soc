@@ -1,7 +1,7 @@
 
 epochs = 150
 lr = 0.00006
-batch_size = 16*3
+batch_size = 16
 
 label2id = {
     "crack":1,
