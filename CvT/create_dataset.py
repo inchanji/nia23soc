@@ -28,7 +28,7 @@ def parse_args():
     parser.add_argument('--root_path',
                         help='root path to the dataset',
                         type=str, 
-                        default='/home/inchanji/workspace/nia23soc/dataset')
+                        default='/home/disk2/nia23soc')
 
     args = parser.parse_args()
 

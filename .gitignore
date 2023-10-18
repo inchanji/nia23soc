@@ -11,3 +11,6 @@ __pycache__
 *.pyc
 
 dataset
+
+SegFormer/wandb/
+SegFormer/segformer-*
