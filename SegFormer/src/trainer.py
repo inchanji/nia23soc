@@ -10,6 +10,31 @@ import numpy as np
 from .config import *
 
 
+# Refer to https://huggingface.co/docs/transformers/v4.17.0/en/main_classes/trainer#transformers.TrainingArguments 
+# for more details on the Trainer arguments
+training_args = TrainingArguments(
+	"segformer-b0-finetuned-segments-sidewalk-outputs",
+	learning_rate=lr,
+	num_train_epochs=epochs,
+	auto_find_batch_size=False,
+	per_device_train_batch_size=batch_size,
+	per_device_eval_batch_size=batch_size,
+	dataloader_num_workers=10,
+	save_total_limit=3,
+	evaluation_strategy="steps",
+	save_strategy="steps",
+	save_steps=1024,
+	eval_steps=1024,
+	logging_steps=1,
+	eval_accumulation_steps=2,
+	load_best_model_at_end=True,
+	push_to_hub=False,
+	resume_from_checkpoint=True,
+	metric_for_best_model="eval_val_loss",
+	#hub_model_id=hub_model_id,
+	#hub_strategy="end",
+)
+
 
 feature_extractor = SegformerImageProcessor(do_reduce_labels=True)
 jitter = ColorJitter(brightness=0.25, contrast=0.25, saturation=0.25, hue=0.1) 
@@ -27,30 +52,6 @@ def val_transforms(example_batch):
 	inputs = feature_extractor(images, labels)
 	return inputs
 
-
-# Refer to https://huggingface.co/docs/transformers/v4.17.0/en/main_classes/trainer#transformers.TrainingArguments 
-# for more details on the Trainer arguments
-training_args = TrainingArguments(
-	"segformer-b0-finetuned-segments-sidewalk-outputs",
-	learning_rate=lr,
-	num_train_epochs=epochs,
-	per_device_train_batch_size=batch_size,
-	per_device_eval_batch_size=batch_size*2,
-	dataloader_num_workers=6,
-	save_total_limit=3,
-	evaluation_strategy="steps",
-	save_strategy="steps",
-	save_steps=20,
-	eval_steps=20,
-	logging_steps=1,
-	eval_accumulation_steps=2,
-	load_best_model_at_end=True,
-	push_to_hub=False,
-	resume_from_checkpoint=True,
-	metric_for_best_model="eval_val_loss",
-	#hub_model_id=hub_model_id,
-	#hub_strategy="end",
-)
 
 
 
@@ -214,6 +215,6 @@ def compute_metrics(eval_pred):
 		metrics = {}
 		metrics["mean_iou"] = mean_iou
 		for i, v in enumerate(per_category_iou):
-			metrics[f"iou_{id2label[i+1]}"] = v
+			metrics[f"iou_{id2label[i+1]}"] = v * iou_weight
 	
 	return metrics
