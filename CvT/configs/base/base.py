@@ -31,6 +31,9 @@ class CFG():
         self.accum_iter      = 1 # suppoprt to do batch accumulation for backprop with effectively larger batch size
         self.verbose_step    = 1
 
+        self.num_classes      = 10
+        self.include_normal   = True
+
     def setExpName(self):
         return f"{self.model_arch}_{self.imgsize}px"
 
@@ -48,6 +51,9 @@ class CFG():
         elif self.scheduler == 'DecayingOscillation' or self.scheduler == 'DecayingOscillation_v2':
             self.osc_t       = self.epochs
             self.tau         = 0.7*0.693147
+
+        if self.include_normal:
+            self.num_classes += 1
 
         self.expName         = self.setExpName()
 

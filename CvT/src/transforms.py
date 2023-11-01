@@ -28,7 +28,7 @@ def get_valid_transforms(imgsize = 512, is_grayscale = False, is_tta=False):
 				Cutout(max_h_size = int(0.2*imgsize), max_w_size = int(0.2*imgsize), p=0.25) if is_tta else None,
 				Resize(imgsize,imgsize),
 				Normalize(mean = MEANPIXVAL_G if is_grayscale else MEANPIXVAL, 
-						  std = STDPIXVAL_G if is_grayscale else STDPIXVAL_G, max_pixel_value = 255.0, p=1.0),				
+						  std = STDPIXVAL_G if is_grayscale else STDPIXVAL, max_pixel_value = 255.0, p=1.0),				
 				ToTensorV2()
 			],  p = 1.,
 				# keypoint_params = KeypointParams(format='xy', remove_invisible=False)
@@ -52,7 +52,7 @@ def get_train_transforms(imgsize = 512, is_grayscale = False):
 					]),
 				Resize(imgsize,imgsize),
 				Normalize(mean = MEANPIXVAL_G if is_grayscale else MEANPIXVAL, 
-						  std = STDPIXVAL_G if is_grayscale else STDPIXVAL_G, max_pixel_value = 255.0, p=1.0),
+						  std = STDPIXVAL_G if is_grayscale else STDPIXVAL, max_pixel_value = 255.0, p=1.0),
 				# Normalize(mean = np.array([0.5,0.5,0.5]), std = np.array([0.5,0.5,0.5]), max_pixel_value=255.0, p=1.0)
 				# CenterCrop(imgsize,imgsize)
 				ToTensorV2()
@@ -83,7 +83,7 @@ def get_train_transforms(imgsize = 512, is_grayscale = False):
 					]),
 				Resize(imgsize,imgsize),
 				Normalize(mean = MEANPIXVAL_G if is_grayscale else MEANPIXVAL, 
-						  std = STDPIXVAL_G if is_grayscale else STDPIXVAL_G, max_pixel_value = 255.0, p=1.0),
+						  std = STDPIXVAL_G if is_grayscale else STDPIXVAL, max_pixel_value = 255.0, p=1.0),
 				ToTensorV2()
 			], 
 			p = 1.,

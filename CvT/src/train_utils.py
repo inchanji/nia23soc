@@ -165,15 +165,8 @@ def valid_one_epoch(epoch,
 		image_pred_conf_all = np.concatenate(image_pred_conf_all)
 
 	val_accuracy 		= np.mean(image_preds_all.ravel()==image_targets_all)
-
 	val_f1_score 		= f1_score_numpy(image_onehot_targets_all, image_pred_conf_all, multiclass = config.multiclass)
 
-	
-	if scheduler is not None:
-		if schd_loss_update:
-			scheduler.step(loss_sum/sample_num)
-		else:
-			scheduler.step()
 
 	return loss_sum/sample_num, val_accuracy, val_f1_score
 

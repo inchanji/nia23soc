@@ -7,6 +7,8 @@ import argparse
 import json
 import numpy as np
 
+INCLUDE_NORMAL = True
+
 classeID = {
     'crack': 0,                 # 균열
     'reticular crack': 1,       # 망상균열
@@ -43,6 +45,11 @@ if __name__ == "__main__":
 
     list_not_exist = []
     # get paths to images 
+
+
+    if INCLUDE_NORMAL:
+        # add normal class
+        classeID['normal'] = 10
 
     root2img = f"{root_path}/원천데이터"
     soc_locations = [ s.split('/')[-1] for s in glob(f"{root2img}/*") ]
@@ -87,11 +94,19 @@ if __name__ == "__main__":
                 with open(path2label) as f:
                     data = json.load(f)
                 
-                one_hot = [0] * 10
+                one_hot = [0] * 11 if INCLUDE_NORMAL else [0] * 10
 
-                for i in range(len(data['image']['annotations'])):
-                    class_ = data['image']['annotations'][i]['label']
-                    one_hot[classeID[class_]] = 1
+                # check if annotations item exists
+                if 'annotations' not in data['image']:
+                    if INCLUDE_NORMAL:
+                        class_ = 'normal'
+                        one_hot[classeID[class_]] = 1
+                    else:
+                        continue
+                else:
+                    for i in range(len(data['image']['annotations'])):
+                        class_ = data['image']['annotations'][i]['label']
+                        one_hot[classeID[class_]] = 1
 
                 one_hot_str = ''
                 for i in range(len(one_hot)):
@@ -105,7 +120,10 @@ if __name__ == "__main__":
                 classes.append(one_hot_str)
 
                 # multi-label classification
-                unique = int(np.sum(np.array(one_hot) * np.array([0,10,20,30,40,50,60,70,80,90])))
+                if INCLUDE_NORMAL:
+                    unique = int(np.sum(np.array(one_hot) * np.array([0,10,20,30,40,50,60,70,80,90,100])))
+                else:
+                    unique = int(np.sum(np.array(one_hot) * np.array([0,10,20,30,40,50,60,70,80,90])))
                 classes_unique.append(unique)
 
                 print(imgpath)
@@ -130,10 +148,14 @@ if __name__ == "__main__":
     df_train, df_test = train_test_split(df, test_size=0.2, random_state=42)#, stratify=df['label_unique'])
     df_valid, df_test = train_test_split(df_test, test_size=0.5, random_state=42)#, stratify=df_test['label_unique'])
 
-
-    df_train.to_csv(f"{root_path}/CvT/train.csv", index=False)
-    df_valid.to_csv(f"{root_path}/CvT/valid.csv", index=False)
-    df_test.to_csv(f"{root_path}/CvT/test.csv", index=False)
+    if INCLUDE_NORMAL:
+        df_train.to_csv(f"{root_path}/CvT/train_inc_norm.csv", index=False)
+        df_valid.to_csv(f"{root_path}/CvT/valid_inc_norm.csv", index=False)
+        df_test.to_csv(f"{root_path}/CvT/test_inc_norm.csv", index=False)
+    else:
+        df_train.to_csv(f"{root_path}/CvT/train.csv", index=False)
+        df_valid.to_csv(f"{root_path}/CvT/valid.csv", index=False)
+        df_test.to_csv(f"{root_path}/CvT/test.csv", index=False)        
 
     # show the number of images per class in train and test set
     print("train set: ", len(df_train))

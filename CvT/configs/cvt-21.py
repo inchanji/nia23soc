@@ -16,6 +16,8 @@ Config.debug 	  		= False
 Config.epochs 	  		= 500
 Config.patience   		= 20
 Config.num_classes      = 10
+Config.include_normal   = True
+
 
 # Config.dataset    	= "RESIZED"
 

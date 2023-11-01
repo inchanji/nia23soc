@@ -23,10 +23,9 @@ def train(config):
 	valid_loader = prepare_dataloader(valid, config, is_training = False)
 	test_loader  = prepare_dataloader(test, config, is_training = False)
 
-
-	model = build_model(config.model_yaml, config.path2pretrained, num_classes = config.num_classes, multiclass = config.multiclass)
-	
-	
+	device 		= select_device(config.device)
+	model 		= build_model(config.model_yaml, config.path2pretrained, num_classes = config.num_classes, multiclass = config.multiclass, device = device)
+	model.to(device)
 
 	seed_everything(config.seed)
 	set_proc_name(config, "nia23soc-train-" + config.model_arch)
@@ -39,7 +38,7 @@ def train(config):
 		weight = None		
 
 	model_spec	= get_modelname_ext(config)
-	device 		= select_device(config.device)
+	
 	optimizer   = prepare_optimizer(config, model)
 	scheduler 	= get_scheduler(config, optimizer, len(train_loader))
 
@@ -47,7 +46,7 @@ def train(config):
 	loss_val 	= get_loss_fn(config, device, valid = True)
 	loss_test 	= get_loss_fn(config, device, valid = True)
 
-	model.to(device)
+	
 
 	print("---------------------------------")
 	print(f"> model architecture: {config.expName}")
@@ -189,7 +188,7 @@ def train(config):
 			break
 
 
-	del model, optimizer, train_loader, valid_loader, scheduler#, scaler
+	del model, optimizer, train_loader, valid_loader, test_loader, scheduler#, scaler
 	with torch.cuda.device(config.device):
 		torch.cuda.empty_cache()
 

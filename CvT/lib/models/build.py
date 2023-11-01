@@ -37,7 +37,7 @@ class CustomCvt(torch.nn.Module):
 
 
 
-def build_model(cfg_file, path2pretrained, num_classes = 10, multiclass = False):
+def build_model(cfg_file, path2pretrained, num_classes = 10, multiclass = False, device = 'cuda:0'):
     config = CN()
     config.set_new_allowed(True)
     config.merge_from_file(cfg_file)
@@ -48,11 +48,11 @@ def build_model(cfg_file, path2pretrained, num_classes = 10, multiclass = False)
     if not is_model(model_name):
         raise ValueError(f'Unkown model: {model_name}')
 
-    model =  model_entrypoints(model_name)(config)
+    model =  model_entrypoints(model_name)(config).to(device)
 
     # load pretrained weights
     if path2pretrained:
-        model.load_state_dict(torch.load(path2pretrained))
+        model.load_state_dict(torch.load(path2pretrained, map_location = device))
 
     if not multiclass:
         model.head =  torch.nn.Linear(model.head.in_features, num_classes)
