@@ -339,8 +339,8 @@ def fbeta_score_numpy(y_true, y_pred, beta, threshold, multiclass = False, eps=1
 
 	y_true = y_true.astype(np.float32)
 
-	true_positive = np.sum(y_pred * y_true, axis=1)
-	precision = true_positive / (np.sum(y_pred, axis=1) + eps)
-	recall = true_positive / (np.sum(y_true, axis=1) + eps)
+	true_positive 	= np.sum(y_pred * y_true, axis=1)
+	precision 		= true_positive / (np.sum(y_pred, axis=1) + eps)
+	recall 			= true_positive / (np.sum(y_true, axis=1) + eps)
 
 	return np.mean(precision * recall / (precision * beta2 + recall + eps) * (1 + beta2))

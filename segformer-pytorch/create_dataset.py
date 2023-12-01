@@ -1,39 +1,39 @@
 import json
 import os
+import numpy as np
 from glob import glob
 import pandas as pd
 from tqdm import tqdm
 import argparse
 import cv2
-
+from src.dataset import classInfo
 from shapely.geometry import LineString, Polygon
 from sklearn.model_selection import train_test_split
 
-import numpy as np
+OVERWRITE   = False
 
 line_w_mult = 2.0
 min_width   = 2.0
 
-classeID = {
-    'crack': 0,                 # 균열
-    'reticular crack': 1,       # 망상균열
-    'detachment': 2,            # 박리
-    'spalling': 3,              # 박락
-    'efflorescene': 4,          # 벡태(typo)
-    'efflorescence': 4,         # 벡태
-    'leak': 5,                  # 누수
-    'rebar': 6,                 # 철근노출
-    'material separation': 7,   # 재료분리
-    'exhilaration': 8,          # 들뜸
-    'damage': 9,                # 파손
-}
+# classeID = {
+#     'crack': 0,                 # 균열
+#     'reticular crack': 1,       # 망상균열
+#     'detachment': 2,            # 박리
+#     'spalling': 3,              # 박락
+#     'efflorescene': 4,          # 벡태(typo)
+#     'efflorescence': 4,         # 벡태
+#     'leak': 5,                  # 누수
+#     'rebar': 6,                 # 철근노출
+#     'material separation': 7,   # 재료분리
+#     'exhilaration': 8,          # 들뜸
+#     'damage': 9,                # 파손
+# }
 
-train_val_test = [ 'valid.csv', 'test.csv', 'train.csv']
-# train_val_test_inc_normal = [ 'valid.csv', 'test.csv', 'train.csv']
+classinfo       = classInfo(include_normal=True)
+train_val_test  = [ 'valid.csv', 'test.csv', 'train.csv']
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Train classification network')
+    parser = argparse.ArgumentParser(description='Train classification network')
 
     parser.add_argument('--root_path',
                         help='root path to the dataset',
@@ -43,45 +43,59 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-
-
 if __name__ == "__main__":
-
     args        = parse_args()
     root_path   = args.root_path
     cvt_path    = f"{root_path}/CvT"
     tgt_path    = f"{root_path}/SegFormer"
 
-    
-
     for csv in train_val_test:
         df = pd.read_csv(f"{cvt_path}/{csv}")
-    
+
         print(f"processing {csv}")
         # get paths to images
         img_paths   = []
         label_paths = []
-
         x_centers   = []
         y_centers   = []
         classes     = []
         img_w       = []
         img_h       = []
 
-
         pbar = tqdm(enumerate(df['img_path']), total=len(df['img_path']))
 
         for idx, imgpath in pbar:
             fname = imgpath.split('/')[-1]
-            pbar.set_description(f"processing {fname}")
+            # pbar.set_description(f"processing {fname}")
 
         # for idx, imgpath in enumerate(df['img_path']):
             # print(imgpath)
             path2label = imgpath.replace('원천데이터', '라벨링데이터').replace('.jpg', '.json')
 
+            path2seg = imgpath.split("원천데이터")[-1]
+            path2seg = f"{tgt_path}/segmentation{path2seg}" 
+            path2seg = path2seg.replace('.jpg', '_mask.png')
+
             if not os.path.exists(path2label):
                 print(f"{path2label} not exist")
                 exit(0)
+            
+            # skip_mask = False
+            # if not OVERWRITE and os.path.exists(path2seg):
+            #     skip_mask = True
+
+                # # check if image is corrupted 
+                # is_corrupted = False
+                # try:
+                #     img = cv2.imread(path2seg)
+                # except:
+                #     is_corrupted = True
+                
+                # if not is_corrupted:
+                #     pbar.set_description(f"skip {fname}")
+                #     skip_mask = True
+            
+            pbar.set_description(f"processing {fname}")
 
             row, col = cv2.imread(imgpath).shape[:2]
 
@@ -90,15 +104,12 @@ if __name__ == "__main__":
 
             mask  = np.zeros((row, col), dtype=np.uint8)            
 
-
-
             with open(path2label, 'r',encoding='utf-8') as file:
                 is_line     = []
                 anns_seg    = []
+                _classes    = []
 
-                _classes = []
-
-                data = json.load(file)
+                data        = json.load(file)
 
                 # check if there is annotation
                 if not 'annotations' in data['image']:
@@ -111,7 +122,8 @@ if __name__ == "__main__":
                         for item in data['image']['annotations']:               # task, video, image중 image의 annotations 항목으로 반복
                             class_ = item['label']
                             try:
-                                if classeID[class_] in [0, 1]:
+                                # if classeID[class_] in [0, 1]:
+                                if classinfo.class2idx[class_] in classinfo.get_crack_idx():
                                     line = LineString(item['points'])                   # Line 좌표로 line 생성
                                     buffer_distance  = item['px']*line_w_mult            # 만들어질 폴리곤의 px 값, 실제 model 학습시에는 line_w_mult 배로 늘려서 학습
                                     buffer_distance  = max(buffer_distance, min_width)   # 최소값보다 작으면 최소값(min_width)으로 설정
@@ -120,17 +132,20 @@ if __name__ == "__main__":
                                     item['points'] = list(buffered_polygon.exterior.coords)
 
                                     points = np.array(item['points'], np.int32)
-                                    cv2.fillPoly(mask, [points], classeID[class_]+1)
-                                    # cv2.fillPoly(mask, [points], (255,255,255))
+                                    # cv2.fillPoly(mask, [points], classeID[class_]+1)
+                                    cv2.fillPoly(mask, [points], classinfo.class2idx[class_])
+                                    
                                 else:
                                     points = np.array(item['points'])
-                                    cv2.fillPoly(mask, [points], classeID[class_]+1) 
-                                    # cv2.fillPoly(mask, [points], (255,255,255))
+                                    # cv2.fillPoly(mask, [points], classeID[class_]+1) 
+                                    cv2.fillPoly(mask, [points], classinfo.class2idx[class_])
                             except:
                                 pbar.set_description(f"annotation error {fname}")
 
-                            if not classeID[class_] in classes:
-                                _classes.append(classeID[class_]+1)
+                            # if not classeID[class_] in classes:
+                            if not classinfo.class2idx[class_] in classes:
+                                _classes.append(classinfo.class2idx[class_])
+                                # _classes.append(classeID[class_]+1)
 
                             # unique classes
                             _classes = list(set(_classes))
@@ -149,10 +164,8 @@ if __name__ == "__main__":
 
 
             if is_normal:
-                xcen = col/2
-                ycen = row/2
-                
-
+                x_cen = col/2
+                y_cen = row/2
             else:
                 x_cen = np.mean(x[mask>0])
                 y_cen = np.mean(y[mask>0])
@@ -165,11 +178,7 @@ if __name__ == "__main__":
             img_w.append(col)
             img_h.append(row)
             
-                        
-            path2seg = imgpath.split("원천데이터")[-1]
-            path2seg = f"{tgt_path}/segmentation{path2seg}" 
-            path2seg = path2seg.replace('.jpg', '_mask.png')
-
+                    
             # check if directory exists
             if not os.path.exists(os.path.dirname(path2seg)):
                 os.makedirs(os.path.dirname(path2seg))

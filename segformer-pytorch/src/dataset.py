@@ -9,38 +9,58 @@ import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 from src.transforms import get_train_transforms, get_valid_transforms
 import torch.nn.functional as F
-'''
-classID = {
-	0: 'crack',
-	1: 'reticular crack',
-	2: 'detachment',
-	3: 'spalling',
-	4: 'efflorescence',
-	5: 'leak',
-	6: 'rebar',
-	7: 'material separation',
-	8: 'exhilaration',
-	9: 'damage'
+
+colors_dict = {	
+	0 : [0,255,0],   		# bg
+	1 : [220,20,60],
+	2 : [119,11,32],
+	3 : [0,0,142],
+	4 : [0,0,230],
+	5 : [0,60,100],
+	6 : [0,0,230],
+	7 : [0,80,100],
+	8 : [0,0,70],
+	9 : [0,0,230],
+	10 : [250,170,30]
 }
 
-
-classID_inc_normal = {
-	0: 'normal',
-	1: 'crack',
-	2: 'reticular crack',
-	3: 'detachment',
-	4: 'spalling',
-	5: 'efflorescence',
-	6: 'leak',
-	7: 'rebar',
-	8: 'material separation',
-	9: 'exhilaration',
-	10: 'damage'
-}
-'''
-
-classID 		   = ['crack','reticular crack','detachment','spalling','efflorescence','leak','rebar','material separation','exhilaration','damage'         ]
+classID 		   = ['crack','reticular crack','detachment','spalling','efflorescence','leak','rebar','material separation','exhilaration','damage' ]
 classID_inc_normal = ['normal','crack','reticular crack','detachment','spalling','efflorescence','leak','rebar','material separation','exhilaration','damage']
+
+class classInfo():
+	def __init__(self, num_classes = len(classID), include_normal = False):
+		self.num_classes 	= num_classes
+		self.classID 		= classID
+		self.class2idx 		= {classID[i]:i for i in range(num_classes)}
+		self.idx2class 		= {i:classID[i] for i in range(num_classes)}
+		self.typoclass 		= {"efflorescene": "efflorescence"}
+
+		if include_normal:
+			self.include_normal()
+	
+		self.inculde_typo()	
+		
+
+	def inculde_typo(self):
+		typoclass = {}
+		for key, value in self.typoclass.items():
+			self.class2idx.update({key:self.class2idx[value]})
+	
+	def include_normal(self):
+		self.num_classes += 1
+		self.classID = ['normal'] + self.classID
+		self.class2idx = {self.classID[i]:i for i in range(self.num_classes)}
+		self.idx2class = {i:self.classID[i] for i in range(self.num_classes)}
+
+	def get_class_names(self):
+		return self.classID
+	
+
+	def get_crack_idx(self):
+		return [self.class2idx['crack'], self.class2idx['reticular crack']]
+	
+	def __len__(self):
+		return self.num_classes
 
 
 
@@ -133,7 +153,7 @@ class SegmentationDataset(Dataset):
 		self.sparse_aug 	 = sparse_aug	
 		self.imgsize 		 = config.imgsize
 		self.enable_patch 	 = config.enable_patch
-		self.reticular_crack = 2
+		self.reticular_crack = -1
 		self.reduce_factor  = reduce_factor
 
 		if is_train:

@@ -33,6 +33,7 @@ class CFG():
 
         self.num_classes      = 10
         self.include_normal   = True
+        self.debug          = False
 
     def setExpName(self):
         return f"{self.model_arch}_{self.imgsize}px"

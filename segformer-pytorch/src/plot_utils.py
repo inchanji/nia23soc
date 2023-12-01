@@ -1,3 +1,4 @@
+import os
 import cv2
 import numpy as np 
 from matplotlib import pyplot as plt
@@ -5,6 +6,11 @@ from src.dataset import classID_inc_normal, classID
 
 
 def plot_confusion_matrix(confusion_matrix, num_classes, class_names, path2save, taskname):
+	# check if directory exists
+	dirname = os.path.dirname(path2save)
+	if not os.path.exists(dirname):
+		os.makedirs(dirname, exist_ok = True)
+
 	plt.figure(figsize = (12,10))
 	plt.imshow(confusion_matrix, cmap = 'Blues')
 	# add numbers to confusion matrix

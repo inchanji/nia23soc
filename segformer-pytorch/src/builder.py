@@ -18,7 +18,9 @@ def build_hugginface_models(cfg, device = "cuda"):
     model = load_model(cfg.path2pretrained, num_classes =  cfg.num_classes + 1, device = device)
     return model
 
-
+def build_hugginface_models_v2(path2pretrained, num_classes, device = "cuda"):
+    model = load_model(path2pretrained, num_classes =  num_classes, device = device)
+    return model
 
 
 

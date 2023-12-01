@@ -64,8 +64,8 @@ class DiceLoss(nn.Module):
 	def forward(self, inputs, targets):
 		# Average of Dice coefficient for all batches, or for a single mask
 		# print(inputs.size(), targets.size())
-		inputs = inputs.flatten(0, 1)
-		targets = targets.flatten(0, 1)
+		inputs = inputs.flatten(0, 2)   # (N, H, W,C) -> (N*H*W, C)
+		targets = targets.flatten(0, 2) # (N, H, W,C) -> (N*H*W, C)
 
 		if inputs.size() != targets.size():
 			print(inputs.size(), targets.size())
@@ -79,7 +79,7 @@ class DiceLoss(nn.Module):
 		sets_sum = torch.where(sets_sum == 0, inter, sets_sum)
 
 		dice = (inter + self.epsilon) / (sets_sum + self.epsilon)
-		return dice.mean()
+		return 1 - dice.mean()
 
 
 
@@ -316,8 +316,7 @@ class MyCrossEntropyLoss(_WeightedLoss):
 	def __init__(self, weight = None, reduction = 'mean'):
 		super().__init__(weight = weight, reduction = reduction)
 		self.weight 	= weight
-		self.reduction = reduction
-		self.loss 		=  nn.CrossEntropyLoss(reduction = reduction, weight = weight)
+		self.reduction 	= reduction
 
 	def forward(self, inputs, targets):
 		# inputs shape: (B, C, H, W)
@@ -328,7 +327,21 @@ class MyCrossEntropyLoss(_WeightedLoss):
 		inputs 	= inputs.permute(0, 2, 3, 1).flatten(0, 2)
 		targets = targets.flatten(0,2)
 
-		return self.loss(inputs, targets)
+		# make targets to one-hot (B*H*W, C)
+		targets = F.one_hot(targets, inputs.shape[1]).float()
+
+		lsm = F.log_softmax(inputs, dim=1)
+
+		# multiply weight along the last dimension
+		if self.weight is not None:
+			lsm = lsm * self.weight.unsqueeze(0)
+
+		loss = -(targets * lsm).sum(-1)
+
+		if self.reduction == 'mean':
+			return loss.mean()
+		elif self.reduction == 'sum':
+			return loss.sum()
 
 
 def get_loss_fn(config, device, valid = False, weight = None):
@@ -344,3 +357,64 @@ def get_loss_fn(config, device, valid = False, weight = None):
 	# 	# return MultiLabelCrossEntropyLoss(weight = weight).to(device)
 	# else:
 	# 	return DiceLossMulti().to(device)
+
+
+
+
+if __name__ == '__main__':
+	
+	batch 		= 2
+	imgsize 	= 4
+	num_classes = 3
+	pred 	= torch.randn(batch, num_classes, imgsize, imgsize)
+	target 	= torch.randint(0, num_classes, (batch, imgsize, imgsize))
+
+	print(pred)
+	print(target)
+
+	pred_i 	= torch.argmax(pred, 1)
+
+	print(pred_i)
+
+	print((pred_i == target).sum())
+
+						   
+	bincount = torch.bincount( pred_i.reshape(-1).long() * num_classes + target.long().reshape(-1), 
+										minlength = num_classes**2
+										).reshape(num_classes, num_classes)	
+
+	print(bincount)
+
+	normalized_bincount = bincount / (target.reshape(-1).shape[0]) 
+	print(normalized_bincount)
+
+
+	iou = bincount.diag() / (bincount.sum(dim=1) + bincount.sum(dim=0) - bincount.diag())
+	iou_norm = normalized_bincount.diag() / (normalized_bincount.sum(dim=1) + normalized_bincount.sum(dim=0) - normalized_bincount.diag())
+	print(iou)
+	print(iou_norm)
+
+
+
+	lsm = F.log_softmax(pred, dim=1)
+
+	lsm = lsm.permute(0, 2, 3, 1).flatten(0, 2)
+	target = target.flatten(0,2)
+	# target to one-hot
+	target = F.one_hot(target, num_classes).float()
+	
+
+
+	print(lsm.shape)
+	print(target.shape)
+
+	loss = -(target * lsm).sum(-1)
+	print(loss)
+
+	weight = torch.Tensor([0.0, 1.0, 1.0])
+	print(target)
+	
+	# multiply weight along the last dimension
+	weighted_target = target * weight.unsqueeze(0)
+	print(weighted_target)
+	# loss_w = loss.mean()

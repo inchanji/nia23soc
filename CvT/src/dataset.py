@@ -1,3 +1,4 @@
+import os 
 import sys 
 import numpy as np 
 import torch
@@ -9,6 +10,48 @@ from src.transforms import get_train_transforms, get_valid_transforms
 from src.transforms import MEANPIXVAL, STDPIXVAL
 from .FMix import sample_mask, make_low_freq_image, binarise_mask
 from .augmix_utils import augment_and_mix
+
+classID 		   = ['crack', 	
+					  'reticular crack',
+					  'detachment',
+					  'spalling',
+					  'efflorescence',
+					  'leak',
+					  'rebar',
+					  'material separation',
+					  'exhilaration',
+					  'damage' ]
+
+class classInfo():
+	def __init__(self, num_classes = len(classID), include_normal = False):
+		self.num_classes 	= num_classes
+		self.classID 		= classID
+		self.class2idx 		= {classID[i]:i for i in range(num_classes)}
+		self.idx2class 		= {i:classID[i] for i in range(num_classes)}
+		self.typoclass 		= {"efflorescene": "efflorescence"}
+
+		if include_normal:
+			self.include_normal()
+	
+		self.inculde_typo()	
+		
+
+	def inculde_typo(self):
+		typoclass = {}
+		for key, value in self.typoclass.items():
+			self.class2idx.update({key:self.class2idx[value]})
+	
+	def include_normal(self):
+		self.num_classes += 1
+		self.classID = ['normal'] + self.classID
+		self.class2idx = {self.classID[i]:i for i in range(self.num_classes)}
+		self.idx2class = {i:self.classID[i] for i in range(self.num_classes)}
+
+	def get_class_names(self):
+		return self.classID
+	
+	def __len__(self):
+		return self.num_classes
 
 def str2onehot(strings, num_classes = 10):
     ind = []
@@ -118,6 +161,8 @@ class ClassificationDataset(Dataset):
 
 		file_path = self.file_names[index]
 
+		fname = os.path.basename(file_path)
+
 		img = load_data(file_path)
 
 		#if self.aug_mix and not(self.inference):
@@ -223,6 +268,41 @@ class ClassificationDataset(Dataset):
 						img[:, bbx1:bbx2, bby1:bby2] = mix_img[:, bbx1:bbx2, bby1:bby2]
 
 		if self.output_label == True:
-			return img.float(), target
+			return fname, img.float(), target
 		else:
-			return img
+			return fname, img
+
+
+
+def rand_bbox(size, lam):
+	W = size[0]
+	H = size[1]
+	cut_rat = np.sqrt(1. - lam)
+	cut_w = np.int(W * cut_rat)
+	cut_h = np.int(H * cut_rat)
+
+	cx = np.random.randint(W)
+	cy = np.random.randint(H)
+
+	bbx1 = np.clip(cx - cut_w // 2, 0, W)
+	bby1 = np.clip(cy - cut_h // 2, 0, H)
+	bbx2 = np.clip(cx + cut_w // 2, 0, W)
+	bby2 = np.clip(cy + cut_h // 2, 0, H)
+	return bbx1, bby1, bbx2, bby2	
+
+
+def rand_bbox_v2(size, lam, offset, imgsize):
+	W = size[0]
+	H = size[1]
+	cut_rat = np.sqrt(1. - lam)
+	cut_w = np.int(W * cut_rat)
+	cut_h = np.int(H * cut_rat)
+
+	cx = np.random.randint(W) + offset[0]
+	cy = np.random.randint(H) + offset[1]
+
+	bbx1 = np.clip(cx - cut_w // 2, 0, imgsize[0])
+	bby1 = np.clip(cy - cut_h // 2, 0, imgsize[1])
+	bbx2 = np.clip(cx + cut_w // 2, 0, imgsize[0])
+	bby2 = np.clip(cy + cut_h // 2, 0, imgsize[1])
+	return bbx1, bby1, bbx2, bby2

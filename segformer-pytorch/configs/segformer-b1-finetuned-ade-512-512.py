@@ -10,8 +10,8 @@ Config.data_root        = '/home/inchanji/workspace/nia23soc/dataset'
 
 Config.apex             = True
 Config.device     		= 'cuda:0' #'mps' #'cuda:0'
-Config.imgsize   		= 512
-Config.debug 	  		= False
+Config.imgsize   		= 256
+
 Config.epochs 	  		= 150
 Config.patience   		= 10
 
@@ -19,7 +19,7 @@ Config.num_classes      = 10
 
 Config.enable_patch     = True
 Config.include_normal   = True   
-Config.w_normal         = 0.01
+Config.w_normal         = 1.0
 
 
 # Config.dataset    	= "RESIZED"
@@ -49,5 +49,8 @@ Config.do_tile_mix      = False
 Config.aug_mix          = False
 
 Config.BCELoss 	    	= False
+Config.gradual_increase_trainset = True
+
+Config.debug 	  		= False
 
 Config.finalize()

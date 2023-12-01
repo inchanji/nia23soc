@@ -112,15 +112,28 @@ def train(config):
 	best_loss 	 	= np.inf
 	best_metric 	= 0
 
+	dir2save = f"outputs/{config.expName}/weights"
+	if not os.path.exists(dir2save):
+		os.makedirs(dir2save, exist_ok = True)
 
-	model_path_best_loss  	= 'weights/{}-{}-{}.pth'.format(config.model_arch, model_spec, "best_loss")
-	model_path_best_metric 	= 'weights/{}-{}-{}.pth'.format(config.model_arch, model_spec, "best_metric")
+	model_path_best_loss  	= '{}/{}-{}-{}.pth'.format(dir2save, config.model_arch, model_spec, "best_loss")
+	model_path_best_metric 	= '{}/{}-{}-{}.pth'.format(dir2save, config.model_arch, model_spec, "best_metric")
 
 	for epoch in range(config.epochs):
 		print(f"Epoch: {epoch}")
 
 		# train 
 		print("do train")
+
+		if config.gradual_increase_trainset:
+			inc = 0.1
+			max_epoch = int(1./inc)
+			frac =  inc * (epoch + 1)
+			frac = min(frac, 1.0)
+			train_ = train.sample(frac = frac)
+			train_loader = prepare_dataloader(train_, config, is_training = True)
+
+
 		
 		avg_train_loss, avg_train_metric = train_one_epoch(epoch,
 															config,
@@ -140,7 +153,7 @@ def train(config):
 		# validation
 		print("do validation")
 		with torch.no_grad():
-			avg_val_loss, avg_val_metric = valid_one_epoch(epoch, 
+			avg_val_loss, avg_val_metric = evaluate(epoch, 
 														config,
 														model, 
 														loss_val, 
@@ -148,12 +161,13 @@ def train(config):
 														device, 
 														scheduler = None, 
 														schd_loss_update = False,
-														wandb = wandb
+														wandb = wandb,
+														taskname = 'val'
 														)
 
 		print("do test")
 		with torch.no_grad():
-			avg_test_loss, avg_test_metric = valid_one_epoch(epoch, 
+			avg_test_loss, avg_test_metric = evaluate(epoch, 
 														config,
 														model, 
 														loss_test, 
@@ -182,6 +196,9 @@ def train(config):
 			torch.save(model.state_dict(), model_path_best_metric)
 			print("save best metric model")
 			patience = 0
+
+			# save the entire model
+			torch.save(model, model_path_best_metric.replace(".pth", "-full.pt"))
 
 
 	del model, optimizer, train_loader, valid_loader, test_loader, scheduler#, scaler

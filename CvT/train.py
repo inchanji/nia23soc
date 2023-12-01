@@ -19,6 +19,20 @@ def train(config):
 	valid		= pd.read_csv(path_valid)
 	test		= pd.read_csv(path_test)
 
+	# show data
+	print("train dataset: ", len(train))
+	print("valid dataset: ", len(valid))
+	print("test dataset: ", len(test))
+
+	# show value counts
+	print("train value counts: ")
+	print(train.label.value_counts())
+	print("valid value counts: ")
+	print(valid.label.value_counts())
+	print("test value counts: ")
+	print(test.label.value_counts())
+
+
 	train_loader = prepare_dataloader(train, config, is_training = True)
 	valid_loader = prepare_dataloader(valid, config, is_training = False)
 	test_loader  = prepare_dataloader(test, config, is_training = False)
@@ -105,9 +119,13 @@ def train(config):
 	best_metric 	= 0
 	best_acc 		= 0
 
-	model_path_best_loss  	= 'weights/{}-{}-{}.pth'.format(config.model_arch, model_spec, "best_loss")
-	model_path_best_metric 	= 'weights/{}-{}-{}.pth'.format(config.model_arch, model_spec, "best_metric")
-	model_path_best_acc 	= 'weights/{}-{}-{}.pth'.format(config.model_arch, model_spec, "best_acc")
+	dir2save = f"outputs/{config.expName}/weights"
+	if not os.path.exists(dir2save):
+		os.makedirs(dir2save, exist_ok = True)	
+
+	model_path_best_loss  	= '{}/{}-{}-{}.pth'.format(dir2save, config.model_arch, model_spec, "best_loss")
+	model_path_best_metric 	= '{}/{}-{}-{}.pth'.format(dir2save, config.model_arch, model_spec, "best_metric")
+	model_path_best_acc 	= '{}/{}-{}-{}.pth'.format(dir2save, config.model_arch, model_spec, "best_acc")
 
 	for epoch in range(config.epochs):
 		avg_train_loss, avg_train_metric = train_one_epoch(epoch, 
@@ -131,7 +149,8 @@ def train(config):
 														device, 
 														scheduler = None, 
 														schd_loss_update = False,
-														wandb = wandb
+														wandb = wandb, 
+														oof = 'val'
 														)
 		
 		# test
@@ -144,7 +163,8 @@ def train(config):
 															device, 
 															scheduler = None, 
 															schd_loss_update = False,
-															wandb = wandb
+															wandb = wandb,
+															oof = 'test'
 															)
 			
 		if wandb:
