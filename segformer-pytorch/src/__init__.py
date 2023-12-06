@@ -17,6 +17,8 @@ from .scheduler import *
 from .train_utils import *  
 from .plot_utils import *
 
+from .ddp_utils import *
+
 try:
 	import wandb
 except ImportError:

@@ -78,9 +78,29 @@ def prepare_dataloader(df, config, is_training = True):
 						batch_size 	= config.train_bs if is_training else config.valid_bs, 
 						shuffle 	= True if is_training else False, 
 						num_workers = config.num_workers)	
-
-
 	return data_loader
+
+
+def prepare_dataloader_ddp(df, config, is_training = True):
+	# distributed data sampler
+	dataset = ClassificationDataset(df,
+								config,
+								transforms 		= get_train_transforms(imgsize = config.imgsize, is_grayscale = config.is_grayscale) if is_training \
+											else get_valid_transforms(imgsize = config.imgsize, is_grayscale = config.is_grayscale, is_tta = config.valid_tta), 
+								is_train 	= is_training, 
+								)
+	
+	data_sampler = torch.utils.data.distributed.DistributedSampler(dataset, num_replicas = config.world_size, rank = config.rank)
+	data_loader  = torch.utils.data.DataLoader(dataset,
+						batch_size 	= config.train_bs if is_training else config.valid_bs, 
+						shuffle 	= False, 
+						num_workers = config.num_workers,
+						pin_memory 	= True,
+						sampler 	= data_sampler)
+	
+	return data_loader
+	
+
 
 
 
