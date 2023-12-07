@@ -63,6 +63,25 @@ class classInfo():
 		return self.num_classes
 
 
+def prepare_dataloader_ddp(df, config, is_training = True):
+	# distributed data sampler
+	dataset = SegmentationDataset(df,
+									config,
+									transforms 		= get_train_transforms(imgsize = config.imgsize, is_grayscale = config.is_grayscale) if is_training \
+												 else get_valid_transforms(imgsize = config.imgsize, is_grayscale = config.is_grayscale, is_tta = config.valid_tta),
+									is_train 	= is_training, 
+								)
+	
+	data_sampler = torch.utils.data.distributed.DistributedSampler(dataset, num_replicas = config.world_size, rank = config.rank)
+	data_loader  = torch.utils.data.DataLoader(dataset,
+						batch_size 	= config.train_bs if is_training else config.valid_bs, 
+						shuffle 	= False, 
+						num_workers = config.num_workers,
+						pin_memory 	= True,
+						sampler 	= data_sampler)
+	
+	return data_loader
+	
 
 def prepare_dataloader(df, config, is_training = True):
 	dataset = SegmentationDataset(df,
@@ -79,7 +98,7 @@ def prepare_dataloader(df, config, is_training = True):
 						)	
 	return data_loader
 
-def construct_patch_df(df0, patchsize = 512, reticular_crack = 2):
+def construct_patch_df(df0, patchsize = 512, reticular_crack = 2, vis = True):
 	df 			= pd.DataFrame()
 	x0 			= []
 	y0 			= []
@@ -93,8 +112,10 @@ def construct_patch_df(df0, patchsize = 512, reticular_crack = 2):
 		patchsize = patchsize[0]
 
 	print("construct patch dataframe")
-
-	pbar = tqdm(range(len(df0)))
+	if vis:
+		pbar = tqdm(range(len(df0)))
+	else:
+		pbar = range(len(df0))
 	for i in pbar:
 		row, col = df0.iloc[i]['img_h'], df0.iloc[i]['img_w']
 		cls_ = df0.iloc[i]['class']
@@ -159,7 +180,7 @@ class SegmentationDataset(Dataset):
 		if is_train:
 			self.df 			= df
 		elif self.enable_patch:
-			self.df 			= construct_patch_df(df, patchsize = self.imgsize, reticular_crack = self.reticular_crack)
+			self.df 			= construct_patch_df(df, patchsize = self.imgsize, reticular_crack = self.reticular_crack, vis = True if config.rank in [-1, 0] else False)
 		else:
 			self.df 			= df
 		

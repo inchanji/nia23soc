@@ -293,6 +293,6 @@ if __name__ == '__main__':
 	train(CFG)
 
 	cleanup() # end dist process
-	if CFG.rank == 0:
+	if CFG.rank in [-1, 0]:
 		print('cleanup done.')
 

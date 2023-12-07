@@ -35,6 +35,11 @@ class CFG():
         self.enable_patch    = False
         self.include_normal  = False
 
+        # DDP related
+        self.world_size      = 1
+        self.rank            = -1
+
+
 
     def setExpName(self):
         return f"{self.model_arch}_{self.imgsize}px"

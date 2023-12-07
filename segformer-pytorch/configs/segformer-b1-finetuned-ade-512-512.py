@@ -51,6 +51,6 @@ Config.aug_mix          = False
 Config.BCELoss 	    	= False
 Config.gradual_increase_trainset = True
 
-Config.debug 	  		= False
+Config.debug 	  		= True
 
 Config.finalize()
