@@ -166,23 +166,26 @@ def eval_v2(config):
 	model_spec	= get_modelname_ext(config)
 	dir2save 	= f"outputs/{config.expName}/weights"
 
-	# model_path_best_metric 	= '{}/{}-{}-{}.pth'.format(dir2save, config.model_arch, model_spec, "best_metric")
-	model_path_best_metric 	= '{}/{}-{}-{}.pt'.format(dir2save, config.model_arch, model_spec, "best_metric-full")
 	path_test 		= f"{config.data_root}/SegFormer/test.csv"    
 	test			= pd.read_csv(path_test)
 	total_test 		= len(test)
-	test_loader  	= prepare_dataloader(test,  config, is_training = False)
+
+
+	# model_path_best_metric 	= '{}/{}-{}-{}.pth'.format(dir2save, config.model_arch, model_spec, "best_metric")
+	model_path_best_metric 	= '{}/{}-{}-{}.pt'.format(dir2save, config.model_arch, model_spec, "best_metric-full")
 
 	device = torch.device(config.device)
 	# model = build_hugginface_models(config)
 	# # load model
 	# model.load_state_dict(torch.load(model_path_best_metric, map_location=device))
-	model = torch.load(model_path_best_metric, map_location=device)
+	model = torch.load(model_path_best_metric, map_location='cpu')
 	model.to(device)
 	model.eval()
 	print("loading model from", model_path_best_metric)
-
 	print(model)
+
+
+	test_loader  	= prepare_dataloader(test,  config, is_training = False)
 
 	seed_everything(config.seed)
 	set_proc_name(config, "nia23soc-test-" + config.model_arch)
@@ -218,45 +221,18 @@ def parse_args():
 	parser.add_argument('--config', 
 						default='configs.segformer-b1-finetuned-ade-512-512', # segformer-b1-finetuned-ade-512-512 segformer-b2-finetuned-ade-512-512
 						help='train config file path')
-	parser.add_argument('--work-dir', help='the dir to save logs and models')
-	parser.add_argument(
-		'--load-from', help='the checkpoint file to load weights from')
-	parser.add_argument(
-		'--resume-from', help='the checkpoint file to resume from')
-	parser.add_argument(
-		'--no-validate',
-		action='store_true',
-		help='whether not to evaluate the checkpoint during training')
-	group_gpus = parser.add_mutually_exclusive_group()
-	group_gpus.add_argument(
-		'--gpus',
-		type=int,
-		help='number of gpus to use '
-		'(only applicable to non-distributed training)')
-	group_gpus.add_argument(
-		'--gpu-ids',
-		type=int,
-		nargs='+',
-		help='ids of gpus to use '
-		'(only applicable to non-distributed training)')
-	parser.add_argument('--seed', type=int, default=None, help='random seed')
-	parser.add_argument(
-		'--deterministic',
-		action='store_true',
-		help='whether to set deterministic options for CUDNN backend.')
-	parser.add_argument(
-		'--options', nargs='+', action=DictAction, help='custom options')
-	parser.add_argument(
-		'--launcher',
-		choices=['none', 'pytorch', 'slurm', 'mpi'],
-		default='none',
-		help='job launcher')
-	parser.add_argument('--local_rank', type=int, default=0)
-	args = parser.parse_args()
-	if 'LOCAL_RANK' not in os.environ:
-		os.environ['LOCAL_RANK'] = str(args.local_rank)
+	parser.add_argument('--nnodes', type=int, default=0) 			# the number of nodes(nodes = number of machines)
+	parser.add_argument('--node_rank', type=int, default=0) 		# the rank of node(0, 1, 2, 3, ...)
+	parser.add_argument('--nproc_per_node', type=int, default=1) 	# the number of processes per node
+	parser.add_argument('--nthreads_per_worker', type=int, default=8) # the number of threads per process
+	parser.add_argument('--master_addr', default='localhost') 		# master node address
+	parser.add_argument('--master_port', default='12355') 			# master node port
+	parser.add_argument('--backend', default='nccl') 				# communication backend
+	parser.add_argument('--rank', default=0) 						# global rank of the process
+	parser.add_argument('--world_size', default=-1) 					# total number of processes to be created
+	parser.add_argument('--init_method', default='env://') 			# initialization method
 
-	return args
+	return parser.parse_args()
 
 	
 
@@ -266,6 +242,17 @@ if __name__ == "__main__":
 	args    = parse_args()
 	module  = importlib.import_module(args.config)
 	CFG     = getattr(module, 'Config')
+	CFG.rank 		= int(os.environ['RANK']) # global rank of the process
+	CFG.world_size 	= int(os.environ['WORLD_SIZE']) # total number of processes to be created	
 
+	os.environ["OMP_NUM_THREADS"] 	= str(args.nthreads_per_worker)
+	dist.init_process_group(backend 	= args.backend, 
+						 	init_method = args.init_method, 
+							rank 		= CFG.rank, 
+							world_size 	= CFG.world_size)
 
 	eval_v2(CFG)
+
+	dist.destroy_process_group()
+	torch.cuda.empty_cache()
+	

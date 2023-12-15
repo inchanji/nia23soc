@@ -1,8 +1,8 @@
 nnodes=1                # number of nodes(=number of servers)
-nproc_per_node=2        # number of processes per node(=number of GPUs per server)
+nproc_per_node=4        # number of processes per node(=number of GPUs per server)
 MASTER_ADDR='localhost'
 MASTER_PORT=29400
-THREADS_PER_WORKER=8   # number of threads per process  
+THREADS_PER_WORKER=16   # number of threads per process  
 
 script=train_ddp.py
 
@@ -17,7 +17,7 @@ torchrun  --nnodes ${nnodes} \
 
 # Anyone looking into this in future, this is how I was able to solve it with nohup
 
-# nohup your_command > output.log 2>&1 &
+# nohup sh run_ddp.sh > output.log 2>&1 &
 
 # for example in this case
 # nohup python -m torch.distributed.launch --nproc_per_node 4 --master_port 9527 train.py ... > output.log 2>&1 &

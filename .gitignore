@@ -6,6 +6,11 @@ CvT/pretrained/*
 CvT/weights/*
 CvT/dataset/*
 CvT/wandb/
+CvT/outputs/*
+
+segformer-pytorch/outputs/*
+segformer-pytorch/wandb/
+
 nohup.out
 __pycache__
 *.pyc
@@ -14,3 +19,10 @@ dataset
 
 SegFormer/wandb/
 SegFormer/segformer-*
+
+*.pth
+*.pt
+*.log
+
+plots/
+oof/

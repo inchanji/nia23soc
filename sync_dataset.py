@@ -6,7 +6,7 @@ import numpy as np
 
 base_dir    = ['원천데이터', '라벨링데이터']
 
-tgt_dir     = '/home/disk2/nia23soc'
+tgt_dir     = '/home/data/nia23soc'
 src_dir     = './nas_pcn'
 
 
@@ -20,14 +20,19 @@ def fast_scandir(dirname):
 filelist = []
 dir_list = []
 # include subdirectories
+print('Scanning directories...')
 for dir in base_dir:
     dir_list += fast_scandir(os.path.join(src_dir, dir))
+# print(dir_list)    
+
+print('Scanning files...')
 for dir in dir_list:
     filelist += [ f for f in glob(os.path.join(dir, '*')) if os.path.isfile(f)]
     # print(os.path.join(dir, '*'))
     # print(glob(os.path.join(dir, '*')))
 
 
+print('Copying files...')
 # copy and paste to target directory
 for path in filelist:
     #check if file exists

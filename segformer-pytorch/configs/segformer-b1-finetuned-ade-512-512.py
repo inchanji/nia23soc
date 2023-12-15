@@ -6,11 +6,11 @@ Config 		= base.CFG()
 Config.model_arch 		= "segformer-b1-finetuned-ade-512-512"
 Config.path2pretrained  = f"pretrained/{Config.model_arch}.pth"
 
-Config.data_root        = '/home/inchanji/workspace/nia23soc/dataset'
+Config.data_root        = '/home/data/nia23soc/SegFormer'
 
 Config.apex             = True
 Config.device     		= 'cuda:0' #'mps' #'cuda:0'
-Config.imgsize   		= 256
+Config.imgsize   		= 512
 
 Config.epochs 	  		= 150
 Config.patience   		= 10
@@ -34,7 +34,7 @@ Config.loss 			= 'cEloss'
 Config.use_weight       = False
 
 Config.train_bs        = 64
-Config.valid_bs        = 64
+Config.valid_bs        = 64*2
 
 # wing loss params
 Config.wingloss_w 		= 10
@@ -51,6 +51,6 @@ Config.aug_mix          = False
 Config.BCELoss 	    	= False
 Config.gradual_increase_trainset = True
 
-Config.debug 	  		= True
+Config.debug 	  		= False
 
 Config.finalize()

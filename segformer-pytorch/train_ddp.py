@@ -158,7 +158,8 @@ def train(config):
 		
 		
 		# validation
-		print("do validation")
+		if config.rank in [-1, 0]:
+			print("do validation")
 		with torch.no_grad():
 			avg_val_loss, avg_val_metric = evaluate_ddp(epoch, 
 														config,
@@ -171,8 +172,8 @@ def train(config):
 														wandb = wandb,
 														taskname = 'val'
 														)
-
-		print("do test")
+		if config.rank in [-1, 0]:
+			print("do test")
 		with torch.no_grad():
 			avg_test_loss, avg_test_metric = evaluate_ddp(epoch, 
 														config,

@@ -217,8 +217,11 @@ def train(config):
 			if avg_val_metric > best_metric:
 				print("saving best metric...")
 				torch.save(model.state_dict(), model_path_best_metric)
+				torch.save(model, model_path_best_metric.replace(".pth", "-full.pt"))
 				best_metric = avg_val_metric
 				better_model 	= True
+
+			
 
 			if avg_val_acc > best_acc:
 				print("saving best acc...")

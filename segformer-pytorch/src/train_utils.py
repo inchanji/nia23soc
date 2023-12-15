@@ -658,9 +658,9 @@ def evaluate(		epoch,
 	metric 		= { 'num_classes': [0]* num_classes, 
 			 		'iou_sum_per_cls': [0]* num_classes,
 			 		'miou_sum': 0,
-					'num_images': 0,
+					'num_images': 1e-6,
 					'miou_sum(w/o bg)': 0,
-					'num_images(w/o bg)': 0
+					'num_images(w/o bg)': 1e-6
 					}
 
 	for step, (images, labels, image_path) in pbar:
@@ -716,12 +716,17 @@ def evaluate(		epoch,
 				if not np.isnan(np.nanmean(iou[1:])):
 					metric['miou_sum(w/o bg)'] 		+= np.nanmean(iou[1:])
 					metric['num_images(w/o bg)'] 	+= 1
-				metric['miou_sum'] += miou_each
+
+				if not np.isnan(miou_each):
+					metric['miou_sum'] += miou_each
+				else:
+					metric['num_images'] -= 1
+
 				miou = metric['miou_sum'] / metric['num_images']	
 				miou_no_bg = metric['miou_sum(w/o bg)'] / metric['num_images(w/o bg)'] if metric['num_images(w/o bg)'] > 0 else 0
 
 
-				description = f'epoch {epoch}, {fname:35s}, loss({taskname}, cls|iou): {loss_cls:.4f}|{loss_iou:.4f}, miou(each): {miou_each:.4f}, miou(avg): {miou:.4f}, miou(avg,w/o bg): {miou_no_bg:.4f}'
+				description = f'epoch {epoch}, {fname:35s}, loss({taskname}, cls|iou): {loss_cls:.4f}|{loss_iou:.4f}, miou(each): {miou_each:.4f}, miou(avg.): {miou:.4f}'
 				pbar.set_description(description)
 
 				fname = _fname
@@ -866,9 +871,9 @@ def evaluate_ddp(	epoch,
 	metric 		= { 'num_classes': [0]* num_classes, 
 			 		'iou_sum_per_cls': [0]* num_classes,
 			 		'miou_sum': 0,
-					'num_images': 0,
+					'num_images': 1e-6,
 					'miou_sum(w/o bg)': 0,
-					'num_images(w/o bg)': 0
+					'num_images(w/o bg)': 1e-6
 					}
 
 	for step, (images, labels, image_path) in pbar:
@@ -924,7 +929,12 @@ def evaluate_ddp(	epoch,
 				if not np.isnan(np.nanmean(iou[1:])):
 					metric['miou_sum(w/o bg)'] 		+= np.nanmean(iou[1:])
 					metric['num_images(w/o bg)'] 	+= 1
-				metric['miou_sum'] += miou_each
+
+				if not np.isnan(miou_each):
+					metric['miou_sum'] += miou_each
+				else:
+					metric['num_images'] -= 1
+
 				miou = metric['miou_sum'] / metric['num_images']	
 				miou_no_bg = metric['miou_sum(w/o bg)'] / metric['num_images(w/o bg)'] if metric['num_images(w/o bg)'] > 0 else 0
 
